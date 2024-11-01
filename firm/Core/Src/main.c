@@ -42,12 +42,17 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim14;
 TIM_HandleTypeDef htim16;
 
 /* USER CODE BEGIN PV */
 
-int cnt=0;
+int16_t cnt=0;
+int32_t diff_cnt=0;
+int speed=0;
+
 int duty=0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -56,6 +61,7 @@ static void MX_GPIO_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM14_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -97,21 +103,21 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM16_Init();
   MX_TIM1_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
 
+  HAL_TIM_Base_Start_IT(&htim14);
+
   HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-	  cnt = TIM3->CNT;
-	  if(duty>0){
+	  if(duty>0){ //dutyMax 800
 		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, duty);
 		  __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, 0);
 	  }else{
@@ -119,7 +125,6 @@ int main(void)
 		  __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, -1 * duty);
 	  }
 	  HAL_Delay(100);
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -292,6 +297,37 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * @brief TIM14 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM14_Init(void)
+{
+
+  /* USER CODE BEGIN TIM14_Init 0 */
+
+  /* USER CODE END TIM14_Init 0 */
+
+  /* USER CODE BEGIN TIM14_Init 1 */
+
+  /* USER CODE END TIM14_Init 1 */
+  htim14.Instance = TIM14;
+  htim14.Init.Prescaler = 6400-1;
+  htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim14.Init.Period = 100-1;
+  htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM14_Init 2 */
+
+  /* USER CODE END TIM14_Init 2 */
+
+}
+
+/**
   * @brief TIM16 Initialization Function
   * @param None
   * @retval None
@@ -385,6 +421,20 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim == &htim14){
+  	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  	  int32_t raw_diff = TIM3->CNT - cnt;
+  	  cnt = TIM3->CNT;
+
+  	  if(raw_diff<0){
+  		  raw_diff += 65536;
+  	  }
+  	  diff_cnt = raw_diff;
+    }
+}
 
 /* USER CODE END 4 */
 
