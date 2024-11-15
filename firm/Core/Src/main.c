@@ -47,11 +47,14 @@ TIM_HandleTypeDef htim16;
 
 /* USER CODE BEGIN PV */
 
-int16_t cnt=0;
+uint16_t cnt=0;
 int32_t diff_cnt=0;
 int speed=0;
-
 int duty=0;
+
+long length = 0;
+
+int read = 0;
 
 /* USER CODE END PV */
 
@@ -117,6 +120,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  read = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+	  if(read==0 && (cnt>50 && 32000>cnt)){ //down
+		  duty= 600;
+	  }else if(read==1 && (cnt<10000 || 30000<cnt)){ //up
+		  duty= -600;
+	  }else{
+		  duty = 0;
+	  }
+
+
+
 	  if(duty>0){ //dutyMax 800
 		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, duty);
 		  __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, 0);
@@ -409,6 +423,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pin : LED_Pin */
   GPIO_InitStruct.Pin = LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -424,14 +444,15 @@ static void MX_GPIO_Init(void)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim == &htim14){
+    if (htim == &htim14){ //10msec timer
   	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-  	  int32_t raw_diff = TIM3->CNT - cnt;
-  	  cnt = TIM3->CNT;
+  	  uint16_t raw_cnt = TIM3->CNT;
+  	  int32_t raw_diff = raw_cnt - cnt;
+  	  cnt = raw_cnt;
 
-  	  if(raw_diff<0){
-  		  raw_diff += 65536;
-  	  }
+//  	  if(raw_diff<0){
+//  		  raw_diff += 65536;
+//  	  }
   	  diff_cnt = raw_diff;
     }
 }
